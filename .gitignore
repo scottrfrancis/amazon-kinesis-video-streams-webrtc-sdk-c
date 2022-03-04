@@ -1,3 +1,4 @@
+.env
 *.iml
 .DS_Store
 .github/github_deploy_key.enc
