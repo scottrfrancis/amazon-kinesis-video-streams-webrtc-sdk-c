@@ -152,12 +152,8 @@ PVOID sendGstreamerAudioVideo(PVOID args)
                     "video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! appsink sync=TRUE emit-signals=TRUE name=appsink-video",
                     &error);
             } else {
+                // this pipeline works
                 pipeline = 
-                    // gst_parse_launch(
-                    //     "autovideosrc ! queue ! videoconvert ! video/x-raw,width=1280,height=720,framerate=[30/1,10000000/333333] ! "
-                    //     "x264enc bframes=0 speed-preset=veryfast bitrate=512 byte-stream=TRUE tune=zerolatency ! "
-                    //     "video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! appsink sync=TRUE emit-signals=TRUE name=appsink-video",
-                    //     &error);
                     gst_parse_launch(
                         "v4l2src device=/dev/video0 ! queue ! jpegdec ! "
                         "videoscale ! video/x-raw,width=1280,height=720 ! "
@@ -165,25 +161,16 @@ PVOID sendGstreamerAudioVideo(PVOID args)
                         "videoconvert ! x264enc ! video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! "
                         "appsink sync=TRUE emit-signals=TRUE name=appsink-video",
                         &error);
-
-                    /*
-                    gst-launch-1.0 -v \
-                      v4l2src device=/dev/video0 ! queue ! jpegdec ! \
-                      videoscale ! video/x-raw,width=1280,height=720 ! \
-                      videorate ! video/x-raw,framerate=30/1 ! \
-                      videoconvert ! x264enc ! video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! \
-                      fakesink
-                    
-                    ! ,framerate=[30/1,10000000/333333] ! \
-                      
-                       bframes=0 speed-preset=veryfast bitrate=512 byte-stream=TRUE tune=zerolatency ! fakesink 
-                     multifilesink location="/tmp/frame.jpg"
-
-                    gst-launch-1.0 -v 
-                        v4l2src device=/dev/video0 ! queue ! videoconvert ! video/x-raw,width=1280,height=720,framerate=[30/1,10000000/333333] ! \
-                        x264enc bframes=0 speed-preset=veryfast bitrate=512 byte-stream=TRUE tune=zerolatency ! \
-                        video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! fakesink                        
-                    */
+                /**
+                 * TEST Pipeline
+                 
+                    gst-launch-1.0 \
+                        v4l2src device=/dev/video0 ! queue ! jpegdec ! \
+                        videoscale ! video/x-raw,width=1280,height=720 ! \
+                        videorate ! video/x-raw,framerate=30/1 ! \
+                        videoconvert ! x264enc ! video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! \
+                        fakesink
+                 */
             }
             break; 
         case SAMPLE_STREAMING_AUDIO_VIDEO:
@@ -196,6 +183,7 @@ PVOID sendGstreamerAudioVideo(PVOID args)
                                             "audio/x-opus,rate=48000,channels=2 ! appsink sync=TRUE emit-signals=TRUE name=appsink-audio",
                                             &error);
             } else {
+                // and this one does NOT -- no audio
                 pipeline =
                     // gst_parse_launch("autovideosrc ! queue ! videoconvert ! video/x-raw,width=1280,height=720,framerate=[30/1,10000000/333333] ! "
                     //                  "x264enc bframes=0 speed-preset=veryfast bitrate=512 byte-stream=TRUE tune=zerolatency ! "
@@ -204,13 +192,48 @@ PVOID sendGstreamerAudioVideo(PVOID args)
                     //                  "queue leaky=2 max-size-buffers=400 ! audioconvert ! audioresample ! opusenc ! "
                     //                  "audio/x-opus,rate=48000,channels=2 ! appsink sync=TRUE emit-signals=TRUE name=appsink-audio",
                     //                  &error);
-                    gst_parse_launch("v4l2src device=/dev/video0 ! queue ! videoconvert ! video/x-raw,width=1280,height=720,framerate=[30/1,10000000/333333] ! "
-                        "x264enc bframes=0 speed-preset=veryfast bitrate=512 byte-stream=TRUE tune=zerolatency ! "
-                        "video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! appsink sync=TRUE emit-signals=TRUE "
+                    gst_parse_launch(
+                        "v4l2src device=/dev/video0 ! queue ! jpegdec ! "
+                        "videoscale ! video/x-raw,width=1280,height=720 ! "
+                        "videorate ! video/x-raw,framerate=30/1 ! "
+                        "videoconvert ! x264enc bframes=0 speed-preset=veryfast bitrate=512 byte-stream=TRUE tune=zerolatency ! "
                         "name=appsink-video autoaudiosrc ! " 
                         "queue leaky=2 max-size-buffers=400 ! audioconvert ! audioresample ! opusenc ! "
-                        "audio/x-opus,rate=48000,channels=2 ! appsink sync=TRUE emit-signals=TRUE name=appsink-audio",
+                        "audio/x-opus,rate=48000,channels=2 ! appsink sync=TRUE emit-signals=TRUE name=appsink-audio ! "
+                        "video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! appsink sync=TRUE emit-signals=TRUE ",
                         &error);
+                    /**
+                    * TEST Pipeline
+                 
+                    // works
+                    gst-launch-1.0 \
+                        v4l2src device=/dev/video0 ! queue ! jpegdec ! \
+                        videoscale ! video/x-raw,width=1280,height=720 ! \
+                        videorate ! video/x-raw,framerate=30/1 ! \
+                        videoconvert ! x264enc ! video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! \
+                        fakesink
+
+                    // no works
+                    gst-launch-1.0 \
+                        v4l2src device=/dev/video0 ! queue ! jpegdec ! \
+                        videoscale ! video/x-raw,width=1280,height=720 ! \
+                        videorate ! video/x-raw,framerate=30/1 ! \
+                        videoconvert ! x264enc bframes=0 speed-preset=veryfast bitrate=512 byte-stream=TRUE tune=zerolatency ! \
+                        fakesink
+
+                        video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! \
+                        queue leaky=2 max-size-buffers=400 ! audioconvert ! audioresample ! opusenc ! \
+                        audio/x-opus,rate=48000,channels=2 ! \
+                        fakesink
+
+
+                        appsink sync=TRUE emit-signals=TRUE name=appsink-video autoaudiosrc ! \ 
+
+
+                    // audio only
+                    gst-launch-1.0 \
+
+                    */                        
                 }
             break;
     }
